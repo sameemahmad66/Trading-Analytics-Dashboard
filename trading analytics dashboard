@@ -1,0 +1,58 @@
+# Trading Analytics Dashboard
+# Author: Sameem Ahmad
+# Description: Fetches live Forex data (USD, GBP, EUR) using an API,
+# stores it in CSV, and visualises currency trends over time.
+
+import requests
+import pandas as pd
+import matplotlib.pyplot as plt
+from datetime import datetime
+
+# === 1. Fetch Data from Exchange Rate API ===
+def fetch_forex_data():
+    url = "https://api.exchangerate-api.com/v4/latest/USD"
+    response = requests.get(url)
+    data = response.json()
+    rates = data["rates"]
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    # Pick common currencies
+    currencies = ["GBP", "EUR", "JPY", "CAD"]
+    forex_data = {cur: rates[cur] for cur in currencies}
+    forex_data["timestamp"] = timestamp
+    return forex_data
+
+# === 2. Save Data into CSV ===
+def save_to_csv(forex_data):
+    df_new = pd.DataFrame([forex_data])
+    try:
+        df_existing = pd.read_csv("data.csv")
+        df = pd.concat([df_existing, df_new], ignore_index=True)
+    except FileNotFoundError:
+        df = df_new
+    df.to_csv("data.csv", index=False)
+    print("✅ Data saved to data.csv")
+
+# === 3. Visualise Data ===
+def plot_data():
+    df = pd.read_csv("data.csv")
+    df["timestamp"] = pd.to_datetime(df["timestamp"])
+    df = df.tail(20)  # show last 20 records
+
+    plt.figure(figsize=(10, 5))
+    for col in df.columns:
+        if col != "timestamp":
+            plt.plot(df["timestamp"], df[col], label=col)
+    plt.title("Forex Rates vs USD (Last 20 Records)")
+    plt.xlabel("Time")
+    plt.ylabel("Exchange Rate")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
+
+# === 4. Run Program ===
+if __name__ == "__main__":
+    data = fetch_forex_data()
+    save_to_csv(data)
+    plot_data()
